@@ -14,37 +14,31 @@ const onLoad = () => {
   //     finished.value = true
   //   }
   // }, 1000)
-  list.value.push({
-    id: 1,
-    title: '1',
-    desc: '1',
-    count: 1
-  })
-  list.value.push({
-    id: 2,
-    title: '2',
-    desc: '2',
-    count: 2
-  })
+  for (let i = 0; i < 10; i++) {
+    list.value.push({
+      id: i,
+      title: i,
+      desc: i,
+      count: i
+    })
+  }
 }
 
-onMounted(() => {
-  onLoad()
-})
+onMounted(() => {})
 </script>
 
 <template>
-  <main>
+  <div class="main">
     <!-- <nav>
       <RouterLink to="/">Home</RouterLink>
       <RouterLink to="/about">About</RouterLink>
     </nav> -->
-    <van-swipe class="my-swipe" :autoplay="3000" indicator-color="white">
-      <van-swipe-item>1</van-swipe-item>
-      <van-swipe-item>2</van-swipe-item>
-    </van-swipe>
+    <van-space class="top">
+      <van-button type="primary" size="mini" plain>添加</van-button>
+      <van-button type="primary" size="mini" plain>刷新</van-button>
+    </van-space>
 
-    <div class="main">
+    <div class="body">
       <van-list
         v-model:loading="loading"
         :finished="finished"
@@ -72,7 +66,7 @@ onMounted(() => {
         </van-cell>
       </van-list>
     </div>
-  </main>
+  </div>
 </template>
 
 <style lang="less" scoped>
@@ -85,18 +79,29 @@ onMounted(() => {
 }
 
 .main {
-  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
 
-  .item {
-    text-align: left;
-    display: flex;
+  .top {
+    padding: 10px;
+  }
 
-    .right {
-      flex: 1;
+  .body {
+    flex: 1;
+    margin-top: 20px;
+    border-top: 1px solid #ddd;
 
-      .oper {
-        display: flex;
-        justify-content: flex-end;
+    .item {
+      text-align: left;
+      display: flex;
+
+      .right {
+        flex: 1;
+
+        .oper {
+          display: flex;
+          justify-content: flex-end;
+        }
       }
     }
   }
