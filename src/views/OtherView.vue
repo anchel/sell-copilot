@@ -23,6 +23,10 @@
         <van-button round block type="primary" native-type="submit"> 提交 </van-button>
       </div>
     </van-form>
+
+    <div>
+      <van-uploader v-model="fileList" :after-read="afterRead" />
+    </div>
   </div>
 </template>
 
@@ -40,6 +44,16 @@ const onSubmit = async (params) => {
   let response = await axios.post('/api/login', params, {})
 
   console.log('ret', response.data)
+}
+
+const fileList = ref([])
+
+const afterRead = async (file) => {
+  console.log('file.status', file)
+  let response = await axios.postForm('/api/image/upload', {
+    file: file.file
+  })
+  console.log(response)
 }
 </script>
 
