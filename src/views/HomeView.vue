@@ -1,32 +1,3 @@
-<script setup>
-import { ref, onMounted } from 'vue'
-
-const finished = ref(false)
-const loading = ref(false)
-const list = ref([])
-const onLoad = () => {
-  loading.value = false
-  // setTimeout(() => {
-  //   const items = Array.from({ length: 20 }).map(() => list.value.length + 1)
-  //   list.value = list.value.concat(items)
-  //   loading.value = false
-  //   if (list.value.length >= 40) {
-  //     finished.value = true
-  //   }
-  // }, 1000)
-  for (let i = 0; i < 10; i++) {
-    list.value.push({
-      id: i,
-      title: i,
-      desc: i,
-      count: i
-    })
-  }
-}
-
-onMounted(() => {})
-</script>
-
 <template>
   <div class="main">
     <!-- <nav>
@@ -46,7 +17,7 @@ onMounted(() => {})
         @load="onLoad"
       >
         <van-cell v-for="item in list" :key="item.id">
-          <div class="item">
+          <div class="item" @click="onClickGoodsItem(item)">
             <van-image
               width="100"
               height="100"
@@ -68,6 +39,59 @@ onMounted(() => {})
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { showToast } from 'vant'
+import ajax from '@/lib/request'
+
+const router = useRouter()
+
+const finished = ref(false)
+const loading = ref(false)
+const list = ref([])
+
+const onLoad = async () => {
+  await getData()
+}
+
+onMounted(() => {})
+
+const offset = ref(0)
+const limit = 10
+const getData = async () => {
+  loading.value = true
+  let response = await ajax.get(`/api/goods/list`, {
+    params: {
+      offset: offset.value,
+      limit
+    }
+  })
+  loading.value = false
+  let data = response.data
+  if (data.code != 0) {
+    showToast('数据加载失败')
+  } else {
+    data.list.forEach((item) => {
+      list.value.push(item)
+    })
+    offset.value += data.list.length
+    if (data.list.length <= 0) {
+      finished.value = true
+    }
+  }
+}
+
+const onClickGoodsItem = async (item) => {
+  router.push({
+    name: 'GoodsPanel',
+    params: {
+      goodsId: item.id
+    }
+  })
+}
+</script>
 
 <style lang="less" scoped>
 .my-swipe .van-swipe-item {

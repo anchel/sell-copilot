@@ -3,7 +3,7 @@ import { RouterView } from 'vue-router'
 </script>
 
 <template>
-  <van-config-provider theme="">
+  <van-config-provider theme="" style="height: 100vh">
     <RouterView />
   </van-config-provider>
 </template>
