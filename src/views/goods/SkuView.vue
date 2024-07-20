@@ -1,7 +1,9 @@
 <template>
   <div class="main">
     <div class="header">
-      <van-space>
+      <van-nav-bar title="" left-text="返回" left-arrow @click-left="onClickBack" />
+
+      <van-space style="margin-top: 6px">
         <van-button type="primary" size="small" plain @click="onOpenAddDialog">添加</van-button>
         <van-button type="primary" size="small" plain @click="onRefresh" :disabled="disableRefresh"
           >刷新</van-button
@@ -14,8 +16,28 @@
       <van-grid :gutter="10" :border="true" :column-num="3">
         <van-grid-item v-for="(item, index) in list" :key="item.id">
           <van-image :src="item.imgurl" @click="onPreviewImage(index)" />
-          <div>标题：{{ item.title }}</div>
-          <div>描述：{{ item.description }}</div>
+          <div class="sku-item-content">
+            <div class="left">
+              <p>标题：{{ item.title }}</p>
+              <p>描述：{{ item.description }}</p>
+            </div>
+            <div class="right">
+              <van-button
+                icon="setting-o"
+                type="primary"
+                size="mini"
+                plain
+                @click="onOpenEditDialog(item)"
+              />
+              <van-button
+                icon="cross"
+                type="danger"
+                size="mini"
+                plain
+                @click="onDeleteGoodsItem(item, index)"
+              />
+            </div>
+          </div>
         </van-grid-item>
       </van-grid>
     </div>
@@ -23,13 +45,13 @@
 
   <van-dialog
     v-model:show="showAddDialog"
-    title="标题"
+    title="新建"
     :show-cancel-button="true"
     :before-close="() => false"
     @cancel="showAddDialog = false"
     @confirm="onAddConfirm"
   >
-    <van-form @submit="onSubmit" ref="formAdd">
+    <van-form @submit="onAddSubmit" ref="formAddEl">
       <van-cell-group inset="">
         <van-field
           v-model="addForm.title"
@@ -48,7 +70,15 @@
         <van-field
           v-model.number="addForm.num_total"
           name="num_total"
-          label="数量"
+          label="总数量"
+          placeholder=""
+          :rules="[]"
+          type="digit"
+        />
+        <van-field
+          v-model.number="addForm.num_remain"
+          name="num_remain"
+          label="剩余数量"
           placeholder=""
           :rules="[]"
           type="digit"
@@ -64,9 +94,60 @@
           </template>
         </van-field>
       </van-cell-group>
-      <div style="margin: 16px">
-        <!-- <van-button round block type="primary" native-type="submit"> 提交 </van-button> -->
-      </div>
+    </van-form>
+  </van-dialog>
+
+  <van-dialog
+    v-model:show="showEditDialog"
+    title="修改"
+    :show-cancel-button="true"
+    :before-close="() => false"
+    @cancel="showEditDialog = false"
+    @confirm="onEditConfirm"
+  >
+    <van-form @submit="onEditSubmit" ref="formEditEl">
+      <van-cell-group inset="">
+        <van-field
+          v-model="editForm.title"
+          name="title"
+          label="标题"
+          placeholder=""
+          :rules="[{ required: true, message: '请填写标题' }]"
+        />
+        <van-field
+          v-model="editForm.description"
+          name="description"
+          label="描述"
+          placeholder=""
+          :rules="[]"
+        />
+        <van-field
+          v-model.number="editForm.num_total"
+          name="num_total"
+          label="总数量"
+          placeholder=""
+          :rules="[]"
+          type="digit"
+        />
+        <van-field
+          v-model.number="editForm.num_remain"
+          name="num_remain"
+          label="剩余数量"
+          placeholder=""
+          :rules="[]"
+          type="digit"
+        />
+        <van-field name="imgurl" label="图片上传">
+          <template #input>
+            <van-uploader
+              :multiple="false"
+              :max-count="1"
+              v-model="fileListEdit"
+              :after-read="afterRead"
+            />
+          </template>
+        </van-field>
+      </van-cell-group>
     </van-form>
   </van-dialog>
 </template>
@@ -74,12 +155,16 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { showToast, showImagePreview } from 'vant'
+import { showToast, showDialog, showImagePreview } from 'vant'
 import ajax from '@/lib/request'
 
 // eslint-disable-next-line no-unused-vars
 const router = useRouter()
 const route = useRoute()
+
+function onClickBack() {
+  router.back()
+}
 
 const firstRequest = ref(false)
 const list = ref([])
@@ -116,6 +201,7 @@ async function onRefresh() {
   }
 }
 
+// 新增
 const showAddDialog = ref(false)
 const onOpenAddDialog = () => {
   addForm.imgurl = ''
@@ -123,18 +209,19 @@ const onOpenAddDialog = () => {
   showAddDialog.value = true
 }
 
-const formAdd = ref(null)
+const formAddEl = ref(null)
 const addForm = reactive({
   title: '',
   description: '',
   imgurl: '',
-  num_total: 0
+  num_total: 0,
+  num_remain: 0
 })
 async function onAddConfirm() {
-  formAdd.value.submit()
+  formAddEl.value.submit()
 }
 
-async function onSubmit() {
+async function onAddSubmit() {
   if (fileList.value.length <= 0) {
     showToast({
       type: 'fail',
@@ -142,7 +229,7 @@ async function onSubmit() {
     })
     return
   }
-  const imgurl = await uploadImage()
+  const imgurl = await uploadImage(fileList)
   if (!imgurl) {
     return
   }
@@ -162,8 +249,8 @@ async function onSubmit() {
 
 const fileList = ref([])
 
-async function uploadImage() {
-  const file = fileList.value[0]
+async function uploadImage(imageList) {
+  const file = imageList.value[0]
   try {
     file.status = 'uploading'
     let response = await ajax.postForm('/api/image/upload', {
@@ -205,9 +292,97 @@ function onPreviewImage(index) {
   console.log('imgList', imgList)
   showImagePreview({
     images: imgList,
-    startPosition: index
+    startPosition: index,
+    closeable: true
   })
 }
+
+const onDeleteGoodsItem = async (item, index) => {
+  showDialog({
+    showCancelButton: true,
+    // theme: 'round-button',
+    message: '确认删除吗？'
+  })
+    .then(async () => {
+      const goodsId = route.params.goodsId
+      let response = await ajax.post(`/api/goods/${goodsId}/sku/del`, {
+        id: item.id
+      })
+      let data = response.data
+      if (data.code != 0) {
+        showToast('操作失败，请稍后再试')
+      } else {
+        showToast('操作成功')
+        setTimeout(() => {
+          list.value.splice(index, 1)
+        }, 200)
+      }
+    })
+    .catch((e) => {
+      console.log(e)
+    })
+}
+
+// 编辑对话框
+const showEditDialog = ref(false)
+const onOpenEditDialog = (item) => {
+  editForm.id = item.id
+  editForm.title = item.title
+  editForm.description = item.description
+  editForm.imgurl = item.imgurl
+  editForm.num_total = item.num_total
+  editForm.num_remain = item.num_remain
+
+  fileListEdit.value = [{ url: editForm.imgurl }]
+  showEditDialog.value = true
+}
+
+const formEditEl = ref(null)
+const editForm = reactive({
+  id: '',
+  title: '',
+  description: '',
+  imgurl: '',
+  num_total: 0,
+  num_remain: 0
+})
+async function onEditConfirm() {
+  formEditEl.value.submit()
+}
+
+async function onEditSubmit() {
+  if (fileListEdit.value.length <= 0) {
+    showToast({
+      type: 'fail',
+      message: '请选择图片'
+    })
+    return
+  } else {
+    const firstFile = fileListEdit.value[0]
+    if (firstFile.file) {
+      // 重新选了新的文件，需要上传
+      const imgurl = await uploadImage(fileListEdit)
+      if (!imgurl) {
+        return
+      }
+      editForm.imgurl = imgurl
+    }
+  }
+
+  const goodsId = route.params.goodsId
+  console.log('editForm', editForm)
+  let response = await ajax.post(`/api/goods/${goodsId}/sku/${editForm.id}`, editForm)
+  let data = response.data
+  if (data.code != 0) {
+    showToast('操作失败，请稍后再试')
+  } else {
+    showToast('操作成功')
+    showEditDialog.value = false
+    await refresh()
+  }
+}
+
+const fileListEdit = ref([])
 </script>
 
 <style lang="less" scoped>
@@ -223,6 +398,23 @@ function onPreviewImage(index) {
   .body {
     flex: 1;
     overflow: auto;
+
+    .sku-item-content {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+
+      .left {
+        flex: 1;
+        color: rgb(34, 34, 34);
+      }
+
+      .right {
+        display: flex;
+        // flex-direction: column;
+        justify-content: space-between;
+      }
+    }
   }
 }
 </style>

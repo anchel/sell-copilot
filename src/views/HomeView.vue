@@ -161,7 +161,7 @@ const onClickGoodsItem = async (item) => {
 const onDeleteGoodsItem = async (item, index) => {
   showDialog({
     showCancelButton: true,
-    theme: 'round-button',
+    // theme: 'round-button',
     message: '确认删除吗？'
   })
     .then(async () => {
