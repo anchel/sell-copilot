@@ -1,6 +1,6 @@
 <template>
   <div class="main">
-    <van-space class="top">
+    <van-space class="header">
       <van-button type="primary" size="mini" plain @click="onOpenAddDialog">添加</van-button>
       <van-button type="primary" size="mini" plain @click="onRefresh" :disabled="disableRefresh"
         >刷新</van-button
@@ -19,14 +19,14 @@
             <van-image
               width="100"
               height="100"
-              src="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg"
+              :src="item.thumbnail"
               @click="onClickGoodsItem(item)"
             />
             <div class="right">
               <div class="content">
-                <div>{{ item.title }}</div>
-                <div>{{ item.description }}</div>
-                <div>{{ item.goods_sku_total }}</div>
+                <p>标题：{{ item.title }}</p>
+                <p>描述：{{ item.description }}</p>
+                <p>缩略图：{{ item.goods_sku_total }}</p>
               </div>
               <div class="oper">
                 <div class="top">
@@ -107,7 +107,7 @@ const onLoad = async () => {
 onMounted(() => {})
 
 const offset = ref(0)
-const limit = 20
+const limit = 10
 
 const getData = async () => {
   loading.value = true
@@ -133,6 +133,7 @@ const getData = async () => {
 }
 
 async function refresh() {
+  finished.value = false
   list.value = []
   offset.value = 0
   await getData()
@@ -221,17 +222,19 @@ const onAddConfirm = async function () {
 }
 
 .main {
+  height: 100%;
   display: flex;
   flex-direction: column;
 
-  .top {
+  .header {
     padding: 10px;
   }
 
   .body {
     flex: 1;
-    margin-top: 20px;
+    margin-top: 10px;
     border-top: 1px solid #ddd;
+    overflow: auto;
 
     .item {
       text-align: left;
@@ -244,6 +247,7 @@ const onAddConfirm = async function () {
 
         .content {
           flex: 1;
+          padding-left: 10px;
         }
 
         .oper {
