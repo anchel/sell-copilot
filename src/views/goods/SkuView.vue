@@ -4,14 +4,15 @@
       <van-nav-bar title="" left-text="返回" left-arrow @click-left="onClickBack" />
 
       <van-space style="margin-top: 6px">
-        <van-button type="primary" size="small" plain @click="onOpenAddDialog">添加</van-button>
         <van-button type="primary" size="small" plain @click="onRefresh" :disabled="disableRefresh"
           >刷新</van-button
         >
+        <van-button type="primary" size="small" plain @click="onOpenAddDialog">添加</van-button>
       </van-space>
     </div>
     <div class="body">
-      <van-empty description="暂无数据" v-if="!!firstRequest && list.length <= 0" />
+      <div class="loading" v-if="showInitLoading"><van-loading /></div>
+      <van-empty description="暂无数据" v-if="showEmptyStatus" />
 
       <van-grid :gutter="10" :border="true" :column-num="3">
         <van-grid-item v-for="(item, index) in list" :key="item.id">
@@ -153,12 +154,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast, showDialog, showImagePreview } from 'vant'
 import ajax from '@/lib/request'
 
-// eslint-disable-next-line no-unused-vars
+const loading = ref(false)
+const showInitLoading = computed(() => {
+  return !firstRequest.value && !!loading.value
+})
+const showEmptyStatus = computed(() => {
+  return !!firstRequest.value && list.value.length <= 0
+})
+
 const router = useRouter()
 const route = useRoute()
 
@@ -170,8 +178,10 @@ const firstRequest = ref(false)
 const list = ref([])
 
 onMounted(async () => {
+  loading.value = true
   await getData(route.params.goodsId)
   firstRequest.value = true
+  loading.value = false
 })
 
 async function getData(goodsId) {
@@ -188,7 +198,11 @@ async function getData(goodsId) {
 
 async function refresh() {
   list.value = []
+  firstRequest.value = false
+  loading.value = true
   await getData(route.params.goodsId)
+  firstRequest.value = true
+  loading.value = false
 }
 
 const disableRefresh = ref(false)
@@ -398,6 +412,12 @@ const fileListEdit = ref([])
   .body {
     flex: 1;
     overflow: auto;
+
+    .loading {
+      padding-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
 
     .sku-item-content {
       width: 100%;

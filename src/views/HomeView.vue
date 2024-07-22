@@ -20,11 +20,11 @@
               width="100"
               height="100"
               :src="item.thumbnail"
-              @click="onClickGoodsItem(item)"
+              @click="onPreviewImage(item)"
             />
             <div class="right">
               <div class="content">
-                <p>标题：{{ item.title }}</p>
+                <p class="title" @click="onClickGoodsItem(item)">标题：{{ item.title }}</p>
                 <p>描述：{{ item.description }}</p>
                 <p>缩略图：{{ item.goods_sku_total }}</p>
               </div>
@@ -39,7 +39,9 @@
                   />
                 </div>
                 <van-space>
-                  <van-button type="primary" size="mini" plain>生成缩略图</van-button>
+                  <van-button type="primary" size="mini" plain @click="onMergeImage(item)"
+                    >生成缩略图</van-button
+                  >
                 </van-space>
               </div>
             </div>
@@ -91,7 +93,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { showDialog, showToast } from 'vant'
+import { showDialog, showToast, showLoadingToast, closeToast, showImagePreview } from 'vant'
 import ajax from '@/lib/request'
 
 const router = useRouter()
@@ -158,6 +160,14 @@ const onClickGoodsItem = async (item) => {
   })
 }
 
+function onPreviewImage(item) {
+  showImagePreview({
+    images: [item.thumbnail],
+    startPosition: 0,
+    closeable: true
+  })
+}
+
 const onDeleteGoodsItem = async (item, index) => {
   showDialog({
     showCancelButton: true,
@@ -176,6 +186,33 @@ const onDeleteGoodsItem = async (item, index) => {
         setTimeout(() => {
           list.value.splice(index, 1)
         }, 200)
+      }
+    })
+    .catch((e) => {
+      console.log(e)
+    })
+}
+
+const onMergeImage = async (item) => {
+  showDialog({
+    showCancelButton: true,
+    // theme: 'round-button',
+    message: '确认生成缩略图吗？'
+  })
+    .then(async () => {
+      showLoadingToast({
+        message: '操作执行中...'
+      })
+      let response = await ajax.post(`/api/goods/merge-image`, {
+        id: item.id
+      })
+      closeToast()
+      let data = response.data
+      if (data.code != 0) {
+        showToast('操作失败，请稍后再试')
+      } else {
+        item.thumbnail = data.imagePath
+        showToast('操作成功')
       }
     })
     .catch((e) => {
@@ -248,6 +285,11 @@ const onAddConfirm = async function () {
         .content {
           flex: 1;
           padding-left: 10px;
+
+          .title {
+            color: rgb(33, 33, 33);
+            font-weight: bold;
+          }
         }
 
         .oper {
