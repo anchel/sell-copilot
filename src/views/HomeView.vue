@@ -26,7 +26,7 @@
               <div class="content">
                 <p class="title" @click="onClickGoodsItem(item)">标题：{{ item.title }}</p>
                 <p>描述：{{ item.description }}</p>
-                <p>缩略图：{{ item.goods_sku_total }}</p>
+                <p>数量：{{ item.goods_sku_total }}</p>
               </div>
               <div class="oper">
                 <div class="top">
@@ -39,6 +39,13 @@
                   />
                 </div>
                 <van-space>
+                  <van-button
+                    icon="setting-o"
+                    type="primary"
+                    size="mini"
+                    plain
+                    @click="onOpenEditDialog(item)"
+                  />
                   <van-button type="primary" size="mini" plain @click="onMergeImage(item)"
                     >生成缩略图</van-button
                   >
@@ -50,15 +57,16 @@
       </van-list>
     </div>
   </div>
+  <!--新增对话框-->
   <van-dialog
     v-model:show="showAddDialog"
-    title="标题"
+    title="新增"
     :show-cancel-button="true"
     :before-close="() => false"
     @cancel="showAddDialog = false"
     @confirm="onAddConfirm"
   >
-    <van-form @submit="onSubmit" ref="formAdd">
+    <van-form @submit="onSubmit" ref="formAddEl">
       <van-cell-group inset="">
         <van-field
           v-model="addForm.title"
@@ -88,6 +96,46 @@
       </div>
     </van-form>
   </van-dialog>
+
+  <!--修改对话框-->
+  <van-dialog
+    v-model:show="showEditDialog"
+    title="修改"
+    :show-cancel-button="true"
+    :before-close="() => false"
+    @cancel="showEditDialog = false"
+    @confirm="onEditConfirm"
+  >
+    <van-form @submit="onSubmitEdit" ref="formEditEl">
+      <van-cell-group inset="">
+        <van-field
+          v-model="editForm.title"
+          name="title"
+          label="标题"
+          placeholder=""
+          :rules="[{ required: true, message: '请填写标题' }]"
+        />
+        <van-field
+          v-model="editForm.description"
+          name="description"
+          label="描述"
+          placeholder=""
+          :rules="[]"
+        />
+        <van-field
+          v-model.number="editForm.goods_sku_total"
+          name="goods_sku_total"
+          label="sku数量"
+          placeholder=""
+          :rules="[]"
+          type="digit"
+        />
+      </van-cell-group>
+      <div style="margin: 16px">
+        <!-- <van-button round block type="primary" native-type="submit"> 提交 </van-button> -->
+      </div>
+    </van-form>
+  </van-dialog>
 </template>
 
 <script setup>
@@ -100,7 +148,15 @@ const router = useRouter()
 
 const finished = ref(false)
 const loading = ref(false)
+
 const list = ref([])
+
+// const showInitLoading = computed(() => {
+//   return !firstRequest.value && !!loading.value
+// })
+// const showEmptyStatus = computed(() => {
+//   return !!firstRequest.value && list.value.length <= 0
+// })
 
 const onLoad = async () => {
   await getData()
@@ -113,13 +169,21 @@ const limit = 10
 
 const getData = async () => {
   loading.value = true
-  let response = await ajax.get(`/api/goods/list`, {
-    params: {
-      offset: offset.value,
-      limit
-    }
-  })
+  let response = await ajax
+    .get(`/api/goods/list`, {
+      params: {
+        offset: offset.value,
+        limit
+      }
+    })
+    .catch((e) => {
+      console.log('e', e)
+      finished.value = true
+    })
   loading.value = false
+  if (!response || !response.data) {
+    return
+  }
   let data = response.data
   if (data.code != 0) {
     showToast('数据加载失败')
@@ -220,7 +284,8 @@ const onMergeImage = async (item) => {
     })
 }
 
-const formAdd = ref(null)
+// 新增
+const formAddEl = ref(null)
 const addForm = reactive({
   title: '',
   description: '',
@@ -245,7 +310,42 @@ const onSubmit = async () => {
 }
 const onAddConfirm = async function () {
   // console.log('addForm', addForm)
-  formAdd.value.submit()
+  formAddEl.value.submit()
+}
+
+// 修改
+const formEditEl = ref(null)
+const editForm = reactive({
+  id: 0,
+  title: '',
+  description: '',
+  goods_sku_total: 0
+})
+const showEditDialog = ref(false)
+const onOpenEditDialog = (item) => {
+  editForm.id = item.id
+  editForm.title = item.title
+  editForm.description = item.description
+  editForm.goods_sku_total = item.goods_sku_total
+
+  showEditDialog.value = true
+}
+
+const onSubmitEdit = async () => {
+  console.log('editForm', editForm)
+  let response = await ajax.post(`/api/goods/${editForm.id}`, editForm)
+  let data = response.data
+  if (data.code != 0) {
+    showToast('操作失败，请稍后再试')
+  } else {
+    showToast('操作成功')
+    showEditDialog.value = false
+    await refresh()
+  }
+}
+const onEditConfirm = async function () {
+  // console.log('editForm', editForm)
+  formEditEl.value.submit()
 }
 </script>
 

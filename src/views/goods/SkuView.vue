@@ -46,7 +46,7 @@
 
   <van-dialog
     v-model:show="showAddDialog"
-    title="新建"
+    title="新增"
     :show-cancel-button="true"
     :before-close="() => false"
     @cancel="showAddDialog = false"
